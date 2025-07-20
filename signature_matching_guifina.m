@@ -4,7 +4,7 @@ function signature_matching_gui()
     featureLayer = 'fc7'; % Use feature layer for embeddings
 
     % Create GUI
-    fig = uifigure('Name', 'Signature Matching (CNN + HOG)', 'Position', [100 100 700 450]);
+    fig = uifigure('Name', 'Signature Matching (CNN-Based)', 'Position', [100 100 700 450]);
 
     uilabel(fig, 'Position', [50 380 120 30], 'Text', 'Input Signature:');
     txt1 = uieditfield(fig, 'text', 'Position', [170 380 350 30]);
@@ -42,24 +42,13 @@ function signature_matching_gui()
         end
     end
 
-    function feat = extract_combined_features(img)
-        % CNN features
+    function feat = extract_cnn_features(img)
         if size(img, 3) == 1
-            rgb_img = repmat(img, 1, 1, 3); % Convert grayscale to RGB
-        else
-            rgb_img = img;
+            img = repmat(img, 1, 1, 3); % Convert grayscale to RGB
         end
-        cnn_input = imresize(rgb_img, inputSize); % Resize for CNN
-        cnn_feat = activations(net, cnn_input, featureLayer, 'OutputAs', 'rows');
-        cnn_feat = double(cnn_feat(:));
-
-        % HOG features
-        gray_img = im2gray(img); % Convert to grayscale if needed
-        gray_resized = imresize(gray_img, [128 128]); % Resize for HOG
-        hog_feat = extractHOGFeatures(gray_resized, 'CellSize', [8 8]);
-
-        % Combine
-        feat = [cnn_feat; hog_feat(:)];
+        img = imresize(img, inputSize); % Resize to CNN input
+        act = activations(net, img, featureLayer, 'OutputAs', 'rows');
+        feat = double(act(:)); % Convert to vector
     end
 
     function compare_with_dataset(input_img_path, dataset_folder)
@@ -71,7 +60,7 @@ function signature_matching_gui()
         end
 
         input_img = imread(input_img_path);
-        feat1 = extract_combined_features(input_img);
+        feat1 = extract_cnn_features(input_img);
 
         % Supported extensions
         exts = {'*.jpg', '*.jpeg', '*.png', '*.bmp', '*.tif', '*.tiff', '*.gif'};
@@ -92,7 +81,7 @@ function signature_matching_gui()
 
         for k = 1:length(files)
             dataset_img = imread(fullfile(files(k).folder, files(k).name));
-            feat2 = extract_combined_features(dataset_img);
+            feat2 = extract_cnn_features(dataset_img);
 
             % MSE for similarity
             min_len = min(length(feat1), length(feat2));
